@@ -7,7 +7,7 @@ import CleverTap from 'clevertap-react-native';
  * @interface WebViewBridgeProps
  * @description Props for the WebViewBridgeComponent.
  * @property {string} webViewUrl - The URL to be loaded in the WebView.
- * @property {string} [cleverTapVariableName="CleverTap"] - The name of the JavaScript variable on the window object in the WebView
+ * @property {string} [cleverTapVariableName="your_variable_name_here"] - The name of the JavaScript variable on the window object in the WebView
  *                                                        that will be used to interface with the CleverTap SDK.
  * @property {object} [style] - Optional custom styles for the WebView component.
  * @property {(error: any) => void} [onError] - Optional callback function to handle errors occurring during message processing.

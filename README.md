@@ -38,22 +38,44 @@ This component is ideal for scenarios where you embed existing web pages or web-
 
 ## Why This Component Exists
 
-According to [CleverTap's official documentation](https://developer.clevertap.com/docs/webview#android):
+CleverTap's native WebView integration is only supported for native Android and iOS SDKs, **not for React Native**. This creates challenges for React Native apps that embed web content and require unified CleverTap analytics and engagement.
 
-> 📘 **Note:** The WebView feature is supported only for native Android and iOS SDKs. It is **not supported for React Native**, Flutter, Cordova, and Unity.
+### Case: Unified User Analytics and Profile Management
 
-For native apps, CleverTap provides a JavaScript interface that can be added to WebViews:
+- Your React Native app uses the CleverTap React Native SDK.
+- Your embedded web pages may use the CleverTap Web SDK or have no CleverTap integration.
+- **Problem:** If you use the CleverTap Web SDK inside a WebView, CleverTap treats the web and native app as separate sources. This results in two different user profiles for the same person, fragmenting your analytics and making it difficult to get a complete view of the user journey.
+- **Note:** To merge these profiles when using the Web SDK, you must explicitly call the `onUserLogin` method from your web content. If you do not, CleverTap will create two separate profiles for the same user.
+- **With This Bridge:** When you use this bridge, all events and profile updates from the web content are routed through the native CleverTap SDK. This means you do **not** need to call `onUserLogin` separately from the web side—the bridge ensures all tracking is unified under a single user profile automatically.
+
+### Case: In-App Campaigns in WebView Content
+
+- **Problem:** If your web pages use the CleverTap Web SDK, you cannot run CleverTap In-App campaigns inside WebViews, as these campaigns are only supported via the native SDK.
+- **Solution:** By routing all events and profile updates through the native SDK using this bridge, you can trigger and display CleverTap In-App campaigns within your WebView content, just like you would in native screens.
+
+### The Solution: Unified Analytics Bridge
+
+This `WebViewBridgeComponent` solves these problems by creating a seamless communication channel between your web content and the native CleverTap React Native SDK:
+
+✅ **Single User Identity:** All CleverTap events, whether from native interactions or web content, are attributed to the same user profile  
+✅ **Complete User Journey:** Track user behavior across native screens and embedded web content as one continuous experience  
+✅ **Centralized Analytics:** All tracking data flows through your React Native app's CleverTap SDK, ensuring consistency  
+✅ **In-App Campaign Support:** Enables CleverTap In-App campaigns to work inside WebViews  
+✅ **Cross-Platform Compatibility:** Works seamlessly on both iOS and Android without platform-specific implementations  
+✅ **Drop-in Integration:** Uses the exact same JavaScript API as CleverTap's native WebView implementation
+
+### Technical Implementation
+
+Unlike native Android apps that can use `addJavascriptInterface()` to expose CleverTap methods to WebViews, React Native requires a different approach:
 
 ```java
-// Native Android example (NOT available in React Native)
-webView.addJavascriptInterface(new CTWebInterface(CleverTapAPI.getDefaultInstance(this)),"your_variable_name_here");
+// Native Android approach (NOT available in React Native)
+webView.addJavascriptInterface(new CTWebInterface(CleverTapAPI.getDefaultInstance(this)), "CleverTap");
 ```
 
-Since this functionality isn't available for React Native, this `WebViewBridgeComponent` recreates the same JavaScript interface and method signatures, allowing you to:
+This component recreates that functionality using React Native's WebView message passing system, providing the same JavaScript interface and method signatures that CleverTap's official documentation describes.
 
-✅ Use the same JavaScript code patterns as documented in CleverTap's WebView guide  
-✅ Migrate existing web content that uses CleverTap WebView integration  
-✅ Maintain consistent CleverTap tracking across native and web content in your React Native app
+**Platform Note:** While iOS WebKit provides built-in JavaScript-to-native communication capabilities, React Native's WebView implementation abstracts these platform differences. This bridge provides a unified solution that works consistently across both platforms without requiring separate iOS and Android implementations.
 
 ## Features
 
@@ -104,14 +126,14 @@ Import and use the `WebViewBridgeComponent` in your React Native screens or comp
 
 ### Component Props
 
-| Prop                    | Type                                     | Default     | Description                                                                                                                               |
-| :---------------------- | :--------------------------------------- | :---------- | :---------------------------------------------------------------------------------------------------------------------------------------- |
-| `webViewUrl`            | `string`                                 | **Required**| The URL of the web page to load in the WebView.                                                                                           |
-| `cleverTapVariableName` | `string`                                 | `CleverTap` | The name of the JavaScript variable exposed on the `window` object in the WebView for interacting with the bridge.                        |
-| `style`                 | `object`                                 | `undefined` | Optional styles to apply to the WebView component. If not provided, a default style (`flex: 1`) is used.                                |
-| `onError`               | `(error: any) => void`                   | `undefined` | Optional callback function invoked if an error occurs while parsing or processing a message from the WebView.                             |
-| `onCustomMessage`       | `(message: any) => void`                 | `undefined` | Optional callback for messages from the WebView that are not CleverTap-related (i.e., do not have a `cleverTapType` property).          |
-| `...webViewProps`       | `WebViewProps`                           | `undefined` | Any other valid props for the `react-native-webview` component (e.g., `onLoad`, `onLoadEnd`, `userAgent`). These will be passed through. |
+| Prop                    | Type                                     | Required/Optional | Default     | Description                                                                                                                               |
+| :---------------------- | :--------------------------------------- | :---------------- | :---------- | :---------------------------------------------------------------------------------------------------------------------------------------- |
+| `webViewUrl`            | `string`                                 | **Required**      | -           | The URL of the web page to load in the WebView.                                                                                           |
+| `cleverTapVariableName` | `string`                                 | Optional          | `CleverTap` | The name of the JavaScript variable exposed on the `window` object in the WebView for interacting with the bridge.                        |
+| `style`                 | `object`                                 | Optional          | `flex: 1`   | Optional styles to apply to the WebView component. If not provided, a default style (`flex: 1`) is used.                                |
+| `onError`               | `(error: any) => void`                   | Optional          | `undefined` | Optional callback function invoked if an error occurs while parsing or processing messages from the WebView. This handles JavaScript parsing errors, not CleverTap-specific errors. |
+| `onCustomMessage`       | `(message: any) => void`                 | Optional          | `undefined` | Optional callback for messages from the WebView that are not CleverTap-related (i.e., do not have a `cleverTapType` property).          |
+| `...webViewProps`       | `WebViewProps`                           | Optional          | `undefined` | Any other valid props for the `react-native-webview` component (e.g., `onLoad`, `onLoadEnd`, `userAgent`). These will be passed through. |
 
 ### Example Implementation (React Native)
 
